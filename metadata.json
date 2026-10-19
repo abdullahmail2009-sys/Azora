@@ -1,0 +1,6 @@
+{
+  "name": "AZORA — Student Productivity & Learning Platform",
+  "description": "AZORA is a modern student productivity and learning app with syllabus tracking, PYQ topic intelligence, actionable backlog management, and AI study planning.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,213 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile, academic preferences, and study configuration.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID matching auth.uid" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "academicSession": { "type": "string", "description": "Target academic session, e.g. 2027-28" },
+        "examTargetDate": { "type": "string", "description": "Target RBSE board exam date YYYY-MM-DD" },
+        "dailyTargetHours": { "type": "number", "description": "Daily planned study hours" },
+        "revisionScheduleType": { "type": "string", "enum": ["default", "advanced"], "description": "Spaced repetition schedule" },
+        "highEnergyTime": { "type": "string", "description": "Preferred high energy time of day" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp of last update" }
+      },
+      "required": ["uid", "email"]
+    },
+    "SyllabusVersion": {
+      "title": "SyllabusVersion",
+      "description": "A syllabus edition containing subjects, units, chapters, topics, and verification metadata.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Syllabus edition ID" },
+        "ownerId": { "type": "string", "description": "Creator user ID" },
+        "title": { "type": "string", "description": "Version title" },
+        "academicSession": { "type": "string", "description": "Target session e.g. 2027-28" },
+        "verificationStatus": { "type": "string", "enum": ["verified", "provisional", "user_defined", "ai_extracted"], "description": "Official verification status" },
+        "sourceUrl": { "type": "string", "description": "Source URL or reference document" },
+        "lastCheckedDate": { "type": "string", "description": "Date verified or imported" },
+        "isOfficial": { "type": "boolean", "description": "Whether sourced directly from official RBSE" },
+        "isActive": { "type": "boolean", "description": "Active for current student progress" },
+        "subjects": { "type": "string", "description": "JSON string or serialized data of subjects" }
+      },
+      "required": ["id", "ownerId", "title", "verificationStatus"]
+    },
+    "TopicMastery": {
+      "title": "TopicMastery",
+      "description": "Progress, completion stages, confidence, and metrics for a specific syllabus topic.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique topic mastery ID (topicId_userId)" },
+        "userId": { "type": "string", "description": "Owner student user ID" },
+        "topicId": { "type": "string", "description": "ID of the syllabus topic" },
+        "chapterId": { "type": "string", "description": "Parent chapter ID" },
+        "subjectId": { "type": "string", "description": "Parent subject ID" },
+        "status": { "type": "string", "description": "Status: Not Started, In Progress, Completed, etc." },
+        "confidence": { "type": "number", "description": "Confidence rating 1 to 5" },
+        "difficulty": { "type": "string", "enum": ["Easy", "Moderate", "Hard"], "description": "Topic difficulty" },
+        "stages": { "type": "string", "description": "JSON string of completed mastery stages" },
+        "totalStudyMinutes": { "type": "number", "description": "Total minutes spent on topic" },
+        "questionsSolved": { "type": "number", "description": "Number of practice questions solved" },
+        "questionsCorrect": { "type": "number", "description": "Number of practice questions answered correctly" },
+        "notes": { "type": "string", "description": "Student notes" },
+        "lastStudiedAt": { "type": "string", "description": "ISO timestamp of last study activity" },
+        "prerequisites": { "type": "string", "description": "JSON array of prerequisite topic IDs" }
+      },
+      "required": ["id", "userId", "topicId", "subjectId"]
+    },
+    "StudyTask": {
+      "title": "StudyTask",
+      "description": "Daily planned task for studying, practicing, or reviewing a topic.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Task ID" },
+        "userId": { "type": "string", "description": "Owner student user ID" },
+        "date": { "type": "string", "description": "Scheduled date YYYY-MM-DD" },
+        "subjectId": { "type": "string", "description": "Subject ID" },
+        "chapterId": { "type": "string", "description": "Chapter ID" },
+        "topicId": { "type": "string", "description": "Topic ID" },
+        "topicTitle": { "type": "string", "description": "Display name of topic" },
+        "taskType": { "type": "string", "description": "theory, notes, numericals, revision, pyq, test" },
+        "plannedMinutes": { "type": "number", "description": "Planned duration" },
+        "actualMinutes": { "type": "number", "description": "Actual duration logged" },
+        "priority": { "type": "string", "enum": ["high", "medium", "low"], "description": "Priority" },
+        "completed": { "type": "boolean", "description": "Completion flag" },
+        "completedAt": { "type": "string", "description": "ISO timestamp of completion" }
+      },
+      "required": ["id", "userId", "date", "subjectId", "taskType"]
+    },
+    "RevisionTask": {
+      "title": "RevisionTask",
+      "description": "Spaced repetition scheduled review for a topic.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Revision task ID" },
+        "userId": { "type": "string", "description": "Owner student user ID" },
+        "topicId": { "type": "string", "description": "Topic ID" },
+        "chapterId": { "type": "string", "description": "Chapter ID" },
+        "subjectId": { "type": "string", "description": "Subject ID" },
+        "topicTitle": { "type": "string", "description": "Topic title" },
+        "revisionNumber": { "type": "number", "description": "1, 2, 3, 4" },
+        "dueDate": { "type": "string", "description": "Scheduled revision date YYYY-MM-DD" },
+        "completed": { "type": "boolean", "description": "Whether completed" },
+        "completedDate": { "type": "string", "description": "Completion date YYYY-MM-DD" },
+        "confidenceScore": { "type": "number", "description": "Confidence score 1 to 5" },
+        "recallResult": { "type": "string", "description": "Recall accuracy rating: High, Medium, Low" }
+      },
+      "required": ["id", "userId", "topicId", "revisionNumber", "dueDate"]
+    },
+    "ResourceItem": {
+      "title": "ResourceItem",
+      "description": "Study resource: notes, formula sheet, derivation, reaction, mistake log, or link.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Resource ID" },
+        "userId": { "type": "string", "description": "Owner student user ID" },
+        "subjectId": { "type": "string", "description": "Subject ID" },
+        "chapterId": { "type": "string", "description": "Chapter ID" },
+        "topicId": { "type": "string", "description": "Optional topic ID" },
+        "type": { "type": "string", "enum": ["note", "formula", "derivation", "reaction", "mistake", "link", "attachment"], "description": "Resource type" },
+        "title": { "type": "string", "description": "Resource title" },
+        "content": { "type": "string", "description": "Text content, formula expression, or note body" },
+        "extraData": { "type": "string", "description": "JSON string for symbols, units, conditions, reagents, or mistake fixes" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "required": ["id", "userId", "subjectId", "chapterId", "type", "title"]
+    },
+    "MockTest": {
+      "title": "MockTest",
+      "description": "Recorded mock or school test with question-level or chapter-level performance and linked errors.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Test ID" },
+        "userId": { "type": "string", "description": "Owner student user ID" },
+        "testName": { "type": "string", "description": "Title of test" },
+        "date": { "type": "string", "description": "Test date YYYY-MM-DD" },
+        "subjectId": { "type": "string", "description": "Subject ID" },
+        "maxMarks": { "type": "number", "description": "Maximum marks possible" },
+        "marksObtained": { "type": "number", "description": "Marks scored" },
+        "timeTakenMinutes": { "type": "number", "description": "Duration taken in minutes" },
+        "chapterPerformance": { "type": "string", "description": "JSON serialized chapter breakdown" },
+        "mistakesLogged": { "type": "string", "description": "JSON serialized mistakes list" },
+        "notes": { "type": "string", "description": "General test review notes" }
+      },
+      "required": ["id", "userId", "testName", "date", "subjectId", "maxMarks", "marksObtained"]
+    },
+    "PYQItem": {
+      "title": "PYQItem",
+      "description": "Previous Year Question with source, marks, and attempt status.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Question ID" },
+        "userId": { "type": "string", "description": "Owner student user ID" },
+        "subjectId": { "type": "string", "description": "Subject ID" },
+        "chapterId": { "type": "string", "description": "Chapter ID" },
+        "topicId": { "type": "string", "description": "Optional topic ID" },
+        "questionText": { "type": "string", "description": "Question body" },
+        "marks": { "type": "number", "description": "Marks weightage" },
+        "examYear": { "type": "string", "description": "Exam session year e.g. 2024, 2023" },
+        "source": { "type": "string", "description": "Source citation or paper code" },
+        "verificationStatus": { "type": "string", "enum": ["verified_rbse", "uploaded_pending", "ai_practice", "student_custom"], "description": "Provenance" },
+        "attemptStatus": { "type": "string", "enum": ["unattempted", "correct", "incorrect", "needs_practice"], "description": "Attempt status" },
+        "solution": { "type": "string", "description": "Model answer / marking scheme guidance" }
+      },
+      "required": ["id", "userId", "subjectId", "chapterId", "questionText", "verificationStatus"]
+    },
+    "Milestone": {
+      "title": "Milestone",
+      "description": "Academic milestone or exam date countdown.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Milestone ID" },
+        "userId": { "type": "string", "description": "Owner student user ID" },
+        "title": { "type": "string", "description": "Milestone title" },
+        "date": { "type": "string", "description": "Date YYYY-MM-DD" },
+        "subjects": { "type": "string", "description": "JSON array of subject IDs" },
+        "targetMarks": { "type": "number", "description": "Target percentage or marks" },
+        "completed": { "type": "boolean", "description": "Whether passed" }
+      },
+      "required": ["id", "userId", "title", "date"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Individual user preferences and configuration"
+    },
+    "/users/{userId}/syllabi/{syllabusId}": {
+      "schema": "SyllabusVersion",
+      "description": "User syllabus versions and custom additions"
+    },
+    "/users/{userId}/topicMastery/{masteryId}": {
+      "schema": "TopicMastery",
+      "description": "Topic completion and confidence records"
+    },
+    "/users/{userId}/studyTasks/{taskId}": {
+      "schema": "StudyTask",
+      "description": "Daily planned study tasks"
+    },
+    "/users/{userId}/revisionTasks/{revisionId}": {
+      "schema": "RevisionTask",
+      "description": "Spaced repetition scheduled reviews"
+    },
+    "/users/{userId}/resources/{resourceId}": {
+      "schema": "ResourceItem",
+      "description": "Notes, formulas, reactions, and mistake logs"
+    },
+    "/users/{userId}/mockTests/{testId}": {
+      "schema": "MockTest",
+      "description": "Recorded mock tests and performance"
+    },
+    "/users/{userId}/pyqs/{pyqId}": {
+      "schema": "PYQItem",
+      "description": "Previous year questions bank and practice history"
+    },
+    "/users/{userId}/milestones/{milestoneId}": {
+      "schema": "Milestone",
+      "description": "Exam milestones and countdown dates"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AZORA</string>
+    <string name="title_activity_main">AZORA</string>
+    <string name="package_name">com.azora.mystudypath.rbse12</string>
+    <string name="custom_url_scheme">com.azora.mystudypath.rbse12</string>
+</resources>

@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Health / connection probe document
+    match /test/{testId} {
+      allow read: if true;
+    }
+
+    // User profile document and subcollections
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Syllabi subcollection
+      match /syllabi/{syllabusId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Topic mastery subcollection
+      match /topicMastery/{masteryId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Daily study tasks subcollection
+      match /studyTasks/{taskId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Spaced revision tasks subcollection
+      match /revisionTasks/{revisionId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Resources & formulas subcollection
+      match /resources/{resourceId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Mock tests subcollection
+      match /mockTests/{testId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // PYQ subcollection
+      match /pyqs/{pyqId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Milestones subcollection
+      match /milestones/{milestoneId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Nested subcollections catch-all
+      match /{allSubcollections=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+  }
+}

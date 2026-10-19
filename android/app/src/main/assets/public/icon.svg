@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="112" fill="#FBF7EF"/>
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="#FBF7EF" stroke="#E5DEC9" stroke-width="4"/>
+  <defs>
+    <linearGradient id="az-star-ic" x1="84" y1="64" x2="416" y2="448" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#75D9B4"/>
+      <stop offset="38%" stop-color="#42BDAE"/>
+      <stop offset="76%" stop-color="#69B7EC"/>
+      <stop offset="100%" stop-color="#B8A4EF"/>
+    </linearGradient>
+    <linearGradient id="az-zbar-ic" x1="244" y1="218" x2="368" y2="328" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#9BE2F8"/>
+      <stop offset="50%" stop-color="#69B7EC"/>
+      <stop offset="100%" stop-color="#B8A4EF"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(26, 26) scale(0.9)">
+    <path d="M 268 42 C 276 154 292 178 468 126 C 334 232 302 268 248 468 C 234 340 212 312 46 328 C 194 248 224 212 268 42 Z" fill="url(#az-star-ic)"/>
+    <path d="M 268 42 C 276 154 292 178 468 126 L 256 238 Z" fill="#75D9B4" fill-opacity="0.16"/>
+    <path d="M 250 144 L 320 262 L 280 296 L 248 232 L 204 316 L 154 320 L 250 144 Z" fill="#FBF7EF"/>
+    <path d="M 244 294 L 326 218 L 368 252 L 286 328 Z" fill="url(#az-zbar-ic)"/>
+  </g>
+</svg>

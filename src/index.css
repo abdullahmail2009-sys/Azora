@@ -1,0 +1,418 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.azora-dark-disabled, .azora-dark-disabled *));
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Noto Sans Devanagari', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Noto Sans Devanagari', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --azora-cream: #FBF7EF;
+    --azora-cream-soft: #F5EFE2;
+    --azora-cream-card: #FFFFFF;
+    --azora-border: #E4DCC9;
+    --azora-teal-deep: #1B4D48;
+    --azora-teal-muted: #4A6B66;
+    --azora-mint: #75D9B4;
+    --azora-turquoise: #42BDAE;
+    --azora-sky: #69B7EC;
+    --azora-lavender: #B8A4EF;
+  }
+
+  html,
+  body {
+    background-color: #FBF7EF !important;
+    color: #1B4D48 !important;
+    font-family: var(--font-sans) !important;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .font-mono {
+    font-family: var(--font-mono) !important;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ============================================================================
+   AZORA Calm Daylight Theme Overrides
+   Palette: Soft Mint (#75D9B4), Turquoise (#42BDAE), Sky Blue (#69B7EC),
+   Subtle Lavender (#B8A4EF), Warm Cream (#FBF7EF), Deep Muted Teal (#1B4D48)
+   ============================================================================ */
+
+/* Remap legacy dark & cold-white surfaces to warm cream & soft alabaster cards */
+.bg-\[\#070A12\],
+.bg-\[\#080C17\],
+.bg-\[\#080C17\]\/90,
+.bg-\[\#080C17\]\/80,
+.bg-\[\#080C17\]\/70,
+.bg-\[\#080C17\]\/60,
+.bg-\[\#080C17\]\/50,
+.bg-\[\#080C17\]\/40,
+.bg-slate-50,
+.bg-slate-50\/70,
+.bg-slate-50\/50,
+.bg-slate-50\/40,
+.bg-slate-50\/30 {
+  background-color: #FBF7EF !important;
+}
+
+.bg-white,
+.bg-\[\#0F1629\],
+.bg-\[\#101626\],
+.bg-\[\#101626\]\/90,
+.bg-\[\#101626\]\/80,
+.bg-\[\#101626\]\/70,
+.bg-\[\#101626\]\/60,
+.bg-slate-950,
+.bg-slate-900,
+.bg-slate-900\/95,
+.bg-slate-900\/90,
+.bg-slate-900\/80,
+.bg-slate-900\/70,
+.bg-slate-900\/60,
+.bg-slate-900\/50,
+.bg-slate-900\/40 {
+  background-color: #F6F0E4 !important;
+}
+
+.bg-slate-950\/90,
+.bg-slate-950\/80,
+.bg-slate-950\/70 {
+  background-color: rgba(27, 77, 72, 0.45) !important;
+}
+
+.bg-slate-950\/60,
+.bg-slate-950\/50 {
+  background-color: #FBF7EF !important;
+}
+
+.bg-slate-100,
+.bg-slate-100\/80,
+.bg-slate-100\/70,
+.bg-slate-800,
+.bg-slate-800\/90,
+.bg-slate-800\/80,
+.bg-slate-800\/70,
+.bg-slate-800\/60,
+.bg-slate-800\/50,
+.bg-slate-800\/40 {
+  background-color: #EDE5D5 !important;
+}
+
+.hover\:bg-slate-800:hover,
+.hover\:bg-slate-800\/60:hover,
+.hover\:bg-slate-700:hover,
+.hover\:bg-slate-100:hover,
+.hover\:bg-slate-50:hover {
+  background-color: #E3D9C6 !important;
+}
+
+/* Remap borders to subtle warm sand borders */
+.border-slate-900,
+.border-slate-800,
+.border-slate-800\/90,
+.border-slate-800\/80,
+.border-slate-800\/70,
+.border-slate-800\/60,
+.border-slate-700,
+.border-slate-700\/80,
+.border-slate-700\/60,
+.border-slate-700\/50,
+.border-slate-200,
+.border-slate-200\/90,
+.border-slate-200\/60,
+.border-slate-100 {
+  border-color: #DFD5C0 !important;
+}
+
+/* Remap typography to deep muted teal (#1B4D48) and balanced slate-teal */
+h1.text-white,
+h2.text-white,
+h3.text-white,
+h4.text-white,
+div.text-white:not(.bg-\[\#1B4D48\]):not(.bg-\[\#42BDAE\]),
+p.text-white,
+span.text-white:not(button *),
+.text-slate-900,
+.text-slate-800,
+.text-slate-100,
+.text-slate-200 {
+  color: #1B4D48 !important;
+}
+
+.bg-\[\#1B4D48\].text-white,
+.bg-\[\#1B4D48\].text-white * {
+  color: #FBF7EF !important;
+}
+
+.text-slate-700,
+.text-slate-300 {
+  color: #2B5E58 !important;
+}
+
+.text-slate-600,
+.text-slate-400 {
+  color: #4D736E !important;
+}
+
+.text-slate-500 {
+  color: #688A85 !important;
+}
+
+/* Ensure form controls are bright, clean, and easy on the eyes */
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
+select,
+textarea {
+  background-color: #FFFFFF !important;
+  color: #1B4D48 !important;
+  border-color: #D8CEB8 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #7D9A95 !important;
+}
+
+/* Primary & Gradient Action Buttons -> Unified AZORA Deep Muted Teal & Turquoise */
+button.bg-blue-600,
+button.bg-indigo-600,
+button.bg-purple-600,
+a.bg-blue-600,
+.bg-gradient-to-r.from-blue-600.to-purple-600,
+.bg-gradient-to-r.from-purple-600.to-blue-600 {
+  background-image: none !important;
+  background-color: #1B4D48 !important;
+  color: #FBF7EF !important;
+  border-color: #1B4D48 !important;
+  box-shadow: 0 1px 2px rgba(27, 77, 72, 0.12) !important;
+}
+
+button.bg-blue-600 *,
+button.bg-indigo-600 *,
+button.bg-purple-600 *,
+.bg-gradient-to-r.from-blue-600.to-purple-600 *,
+.bg-gradient-to-r.from-purple-600.to-blue-600 * {
+  color: #FBF7EF !important;
+}
+
+button.bg-blue-600 .bg-blue-700,
+button.bg-blue-600 .bg-blue-800,
+button.bg-indigo-600 .bg-indigo-700,
+button.bg-purple-600 .bg-purple-700 {
+  background-color: rgba(251, 247, 239, 0.18) !important;
+  color: #FBF7EF !important;
+}
+
+button.bg-blue-600:hover,
+button.bg-indigo-600:hover,
+button.bg-purple-600:hover,
+.bg-gradient-to-r.from-blue-600.to-purple-600:hover,
+.bg-gradient-to-r.from-purple-600.to-blue-600:hover {
+  background-image: none !important;
+  background-color: #143B37 !important;
+}
+
+button.bg-emerald-600 {
+  background-color: #42BDAE !important;
+  color: #FFFFFF !important;
+}
+
+button.bg-emerald-600:hover {
+  background-color: #35A597 !important;
+}
+
+/* Unify competing translucent action button pills to calm AZORA palette */
+.bg-emerald-600\/20,
+.bg-emerald-500\/15,
+.bg-emerald-500\/10,
+.bg-emerald-950\/40,
+.bg-emerald-950\/25,
+.bg-emerald-950\/20 {
+  background-color: rgba(117, 217, 180, 0.25) !important;
+  color: #14533E !important;
+  border-color: rgba(66, 189, 174, 0.45) !important;
+}
+
+.bg-blue-600\/20,
+.bg-blue-500\/20,
+.bg-blue-500\/15,
+.bg-blue-500\/10,
+.bg-blue-950\/60,
+.bg-blue-950\/40,
+.bg-blue-950\/30,
+.bg-blue-950\/20 {
+  background-color: rgba(105, 183, 236, 0.22) !important;
+  color: #1B4D48 !important;
+  border-color: rgba(105, 183, 236, 0.45) !important;
+}
+
+.bg-purple-600\/20,
+.bg-purple-500\/20,
+.bg-purple-500\/15,
+.bg-purple-500\/10,
+.bg-purple-950\/40,
+.bg-purple-950\/30,
+.bg-purple-950\/20 {
+  background-color: rgba(184, 164, 239, 0.22) !important;
+  color: #3D2C6D !important;
+  border-color: rgba(184, 164, 239, 0.45) !important;
+}
+
+.bg-amber-600\/15,
+.bg-amber-500\/20,
+.bg-amber-500\/15,
+.bg-amber-500\/10,
+.bg-amber-950\/40,
+.bg-amber-950\/30,
+.bg-amber-950\/20 {
+  background-color: rgba(245, 158, 11, 0.14) !important;
+  color: #78350F !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+.bg-rose-600\/20,
+.bg-rose-500\/15,
+.bg-rose-500\/10,
+.bg-rose-950\/40,
+.bg-rose-950\/30,
+.bg-rose-950\/20 {
+  background-color: rgba(244, 63, 94, 0.12) !important;
+  color: #881337 !important;
+  border-color: rgba(244, 63, 94, 0.3) !important;
+}
+
+/* Readable accent text colors on warm cream background */
+.text-blue-600,
+.text-blue-400,
+.text-blue-300,
+.text-blue-200 {
+  color: #2678B2 !important;
+}
+
+.text-emerald-600,
+.text-emerald-400,
+.text-emerald-300,
+.text-emerald-200 {
+  color: #1B7A58 !important;
+}
+
+.text-purple-600,
+.text-purple-400,
+.text-purple-300,
+.text-purple-200 {
+  color: #5E439C !important;
+}
+
+.text-amber-600,
+.text-amber-400,
+.text-amber-300,
+.text-amber-200 {
+  color: #9A5B13 !important;
+}
+
+.text-rose-600,
+.text-rose-400,
+.text-rose-300,
+.text-rose-200 {
+  color: #B4234E !important;
+}
+
+/* ============================================================================
+   Streak Tracker Entrance Bounce & Milestone Fire Animations
+   ============================================================================ */
+@keyframes azoraStreakBounceIn {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  58% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.006);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(1.5px) scale(0.998);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes azoraFireMilestoneBounce {
+  0% {
+    transform: translateY(4px) scale(0.84);
+  }
+  45% {
+    transform: translateY(-4px) scale(1.14) rotate(-3deg);
+  }
+  72% {
+    transform: translateY(1.5px) scale(0.95) rotate(2deg);
+  }
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes azoraFlameFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-1.5px) scale(1.04);
+  }
+}
+
+.animate-streak-bounce-in {
+  animation: azoraStreakBounceIn 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fire-milestone-bounce {
+  animation: azoraFireMilestoneBounce 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-flame-float {
+  animation: azoraFlameFloat 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-streak-bounce-in,
+  .animate-fire-milestone-bounce,
+  .animate-flame-float {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* ============================================================================
+   Android / Mobile Safe-Area Insets (viewport-fit=cover)
+   Evaluates to 0px on desktop and standard browsers; protects notched/gesture bars on Android.
+   ============================================================================ */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+
