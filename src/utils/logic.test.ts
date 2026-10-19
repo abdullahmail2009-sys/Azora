@@ -5,7 +5,12 @@ import {
   calculateTopicMasteryPercentage,
   calculateOverallProgress,
 } from './progressCalc.ts';
-import { calculateStudyStreak, getStreakMilestoneInfo } from './streakCalc.ts';
+import {
+  calculateStudyStreak,
+  getStreakMilestoneInfo,
+  sanitizeLegacySeedData,
+  getLocalDateStr,
+} from './streakCalc.ts';
 import {
   calculateNextRevisionDate,
   getRevisionUrgency,
@@ -1155,4 +1160,187 @@ test('apiClient: resolveAndroidBackAction enforces modal/drawer priority before 
   // 8. On dashboard with no overlays -> exit app
   assert.equal(resolveAndroidBackAction(baseState), 'exit_app');
 });
+
+test('streakCalc: fresh account with unstarted planned tasks and empty mastery starts at 0-day streak', () => {
+  const today = '2026-10-19';
+  const freshSummary = calculateStudyStreak(
+    {
+      masteryMap: {
+        'unstarted-topic': {
+          topicId: 'unstarted-topic',
+          chapterId: 'phy-c1',
+          subjectId: 'physics',
+          status: 'Not Started',
+          confidence: 3,
+          completedStages: [],
+          difficulty: 'Moderate',
+          totalStudyMinutes: 0,
+          questionsSolved: 0,
+          questionsCorrect: 0,
+          startDate: today,
+          lastStudiedDate: today,
+          updatedAt: '2026-10-19T00:00:00Z',
+        },
+      },
+      studyTasks: [
+        {
+          id: 'task-seed-1',
+          date: today,
+          subjectId: 'physics',
+          subjectName: 'Physics',
+          chapterId: 'phy-c1',
+          chapterTitle: 'Electric Charges and Fields',
+          topicId: 'phy-c1-t3',
+          topicTitle: 'Electric Field Lines & Electric Dipole',
+          taskType: 'numericals',
+          plannedMinutes: 60,
+          actualMinutes: 0,
+          priority: 'high',
+          energySlot: 'morning_high',
+          completed: false,
+        },
+      ],
+      revisionTasks: [
+        {
+          id: 'rev-seed-1',
+          topicId: 'phy-c1-t2',
+          chapterId: 'phy-c1',
+          subjectId: 'physics',
+          topicTitle: 'Coulombs Law',
+          subjectName: 'Physics',
+          revisionStep: 3,
+          scheduledDate: today,
+          completed: false,
+        },
+      ],
+      mockTests: [],
+    },
+    today
+  );
+
+  assert.equal(freshSummary.currentStreak, 0);
+  assert.equal(freshSummary.longestStreak, 0);
+  assert.equal(freshSummary.totalActiveDays, 0);
+  assert.equal(freshSummary.isActiveToday, false);
+  assert.equal(freshSummary.streakAtRisk, false);
+  assert.equal(freshSummary.todayMinutes, 0);
+  assert.equal(freshSummary.milestone.isMilestoneDay, false);
+  assert.equal(freshSummary.milestone.achievedMilestone, null);
+  assert.equal(freshSummary.milestone.fireVariant, 'ember');
+});
+
+test('streakCalc: sanitizeLegacySeedData removes legacy 7-day seed artifacts while preserving real user study records', () => {
+  const today = '2026-10-19';
+  const legacyMastery: Record<string, TopicMasteryState> = {
+    'phy-c1-t1': {
+      topicId: 'phy-c1-t1',
+      chapterId: 'phy-c1',
+      subjectId: 'physics',
+      status: 'Completed',
+      confidence: 4,
+      completedStages: ['theory', 'notes'],
+      difficulty: 'Easy',
+      totalStudyMinutes: 90,
+      questionsSolved: 15,
+      questionsCorrect: 13,
+      startDate: '2026-10-13',
+      completedDate: '2026-10-14',
+      lastStudiedDate: '2026-10-16',
+      updatedAt: '2026-10-19T00:00:00Z',
+    },
+    'real-user-topic': {
+      topicId: 'real-user-topic',
+      chapterId: 'phy-c2',
+      subjectId: 'physics',
+      status: 'Completed',
+      confidence: 5,
+      completedStages: ['theory', 'notes', 'pyqs'],
+      difficulty: 'Hard',
+      totalStudyMinutes: 105,
+      questionsSolved: 12,
+      questionsCorrect: 11,
+      completedDate: today,
+      lastStudiedDate: today,
+      updatedAt: '2026-10-19T10:00:00Z',
+    },
+  };
+
+  const sanitized = sanitizeLegacySeedData({
+    masteryMap: legacyMastery,
+    studyTasks: [
+      {
+        id: 'task-seed-1',
+        date: today,
+        subjectId: 'physics',
+        subjectName: 'Physics',
+        chapterId: 'phy-c1',
+        chapterTitle: 'Electric Charges and Fields',
+        topicId: 'phy-c1-t3',
+        topicTitle: 'Electric Field Lines & Electric Dipole',
+        taskType: 'numericals',
+        plannedMinutes: 60,
+        actualMinutes: 45,
+        priority: 'high',
+        energySlot: 'morning_high',
+        completed: false,
+      },
+    ],
+    mockTests: [
+      {
+        id: 'test-seed-1',
+        testName: 'Physics Unit 1 Chapter Test (Electrostatics)',
+        date: '2026-10-15',
+        subjectId: 'physics',
+        subjectName: 'Physics',
+        maxMarks: 25,
+        marksObtained: 21,
+        timeTakenMinutes: 60,
+        chapterPerformance: [],
+        mistakes: [],
+      },
+    ],
+  });
+
+  assert.equal(sanitized.didSanitize, true);
+  assert.equal(Boolean(sanitized.masteryMap['phy-c1-t1']), false);
+  assert.equal(Boolean(sanitized.masteryMap['real-user-topic']), true);
+  assert.equal(sanitized.studyTasks[0].actualMinutes, 0);
+  assert.equal(sanitized.mockTests.length, 0);
+
+  // Resulting streak reflects only the 1 real user topic completed today
+  const streak = calculateStudyStreak(
+    {
+      masteryMap: sanitized.masteryMap,
+      studyTasks: sanitized.studyTasks,
+      revisionTasks: [],
+      mockTests: sanitized.mockTests,
+    },
+    today
+  );
+  assert.equal(streak.currentStreak, 1);
+  assert.equal(streak.longestStreak, 1);
+  assert.equal(streak.milestone.exactMilestoneReached, 1);
+});
+
+test('streakCalc: deduplicates multiple same-day activities and verifies 21-day and 30-day milestones', () => {
+  const today = '2026-10-19';
+  const localFormatted = getLocalDateStr(new Date(2026, 9, 19));
+  assert.equal(localFormatted, '2026-10-19');
+
+  const m21 = getStreakMilestoneInfo(21, true, 1);
+  assert.equal(m21.isMilestoneDay, true);
+  assert.equal(m21.exactMilestoneReached, 21);
+  assert.equal(m21.nextMilestone, 30);
+
+  const m30 = getStreakMilestoneInfo(30, true, 1);
+  assert.equal(m30.isMilestoneDay, true);
+  assert.equal(m30.exactMilestoneReached, 30);
+  assert.equal(m30.nextMilestone, 60);
+
+  // If streak is 7 from yesterday (isActiveToday = false), isMilestoneDay is false until today is logged
+  const m7AtRisk = getStreakMilestoneInfo(7, false, 0);
+  assert.equal(m7AtRisk.isMilestoneDay, false);
+  assert.equal(m7AtRisk.achievedMilestone, 7);
+});
+
 

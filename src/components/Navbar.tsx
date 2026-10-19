@@ -12,7 +12,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
-  const { currentUser, loginGoogle, logoutUser } = useApp();
+  const { currentUser, setIsAuthModalOpen, logoutUser, authError, clearAuthError } = useApp();
   const { isPlaying, masterEnabled, setIsPlayerOpen, isPausedByBackground } = useLocalMusic();
 
   const navItems = [
@@ -121,9 +121,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               </button>
             ) : (
               <button
-                onClick={loginGoogle}
-                aria-label="Sign in with Google"
-                title="Sign in with Google"
+                onClick={() => setIsAuthModalOpen(true)}
+                aria-label="Sign in or Register"
+                title="Sign in with Google or Email"
+                data-testid="navbar-signin-btn"
                 className="p-2 rounded-xl text-[#4A6B66] hover:text-[#1B4D48] hover:bg-[#F2ECE0] transition cursor-pointer"
               >
                 <LogIn className="w-4 h-4" />
@@ -131,7 +132,31 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             )}
           </div>
         </div>
+
+        {authError && (
+          <div
+            role="alert"
+            className="mb-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-center justify-between gap-3"
+          >
+            <span className="leading-snug">{authError}</span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="px-2 py-1 rounded-lg bg-[#1B4D48] text-[#FBF7EF] font-semibold cursor-pointer"
+              >
+                Options
+              </button>
+              <button
+                onClick={clearAuthError}
+                className="px-2 py-1 rounded-lg bg-white border border-amber-300 text-amber-900 font-semibold cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
 };
+

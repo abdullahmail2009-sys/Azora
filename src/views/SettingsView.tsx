@@ -51,6 +51,9 @@ export const SettingsView: React.FC = () => {
     currentUser,
     syncState,
     lastSyncTime,
+    authError,
+    clearAuthError,
+    setIsAuthModalOpen,
     loginGoogle,
     logoutUser,
     exportJSON,
@@ -937,16 +940,24 @@ export const SettingsView: React.FC = () => {
                 className="px-4 py-2 rounded-xl bg-[#FBF7EF] hover:bg-[#F5EFE2] border border-[#E4DCC9] text-[#1B4D48] font-semibold flex items-center gap-1.5 cursor-pointer"
               >
                 <LogOut className="w-4 h-4 text-[#42BDAE]" />
-                Sign Out ({currentUser.email})
+                Sign Out ({currentUser.email || currentUser.displayName || 'Account'})
               </button>
             ) : (
-              <button
-                onClick={loginGoogle}
-                className="px-4 py-2 rounded-xl bg-[#1B4D48] hover:bg-[#153E3A] text-white font-bold flex items-center gap-1.5 cursor-pointer"
-              >
-                <LogIn className="w-4 h-4" />
-                Sign In with Google
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={loginGoogle}
+                  className="px-4 py-2 rounded-xl bg-[#1B4D48] hover:bg-[#153E3A] text-white font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Sign In with Google
+                </button>
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-[#FBF7EF] hover:bg-[#F5EFE2] border border-[#E4DCC9] text-[#1B4D48] font-semibold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>Email Sign In / Register</span>
+                </button>
+              </div>
             )}
           </div>
 
@@ -971,6 +982,24 @@ export const SettingsView: React.FC = () => {
             </label>
           </div>
         </div>
+
+        {authError && (
+          <div
+            role="alert"
+            className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex items-start justify-between gap-3"
+          >
+            <div className="space-y-1">
+              <div className="font-bold text-amber-900">Google Sign-In Diagnostic Notice</div>
+              <p className="text-amber-800 leading-relaxed">{authError}</p>
+            </div>
+            <button
+              onClick={clearAuthError}
+              className="px-2.5 py-1 rounded-lg bg-white border border-amber-300 text-amber-900 font-semibold shrink-0 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {importStatus && (
           <div className="p-3 rounded-xl bg-[#75D9B4]/20 border border-[#42BDAE] text-[#1B4D48] text-xs font-medium">

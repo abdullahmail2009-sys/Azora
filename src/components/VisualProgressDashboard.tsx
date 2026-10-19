@@ -357,8 +357,8 @@ export const VisualProgressDashboard: React.FC<{
               </div>
             </div>
 
-            <div className="h-64 sm:h-72 w-full pt-2">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-64 sm:h-72 w-full min-w-0 pt-2">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                 <BarChart
                   data={subjectsData}
                   margin={{ top: 10, right: 10, left: -20, bottom: 25 }}
@@ -434,8 +434,8 @@ export const VisualProgressDashboard: React.FC<{
                 No units found for selected subject.
               </div>
             ) : (
-              <div className="h-64 sm:h-72 w-full pt-2">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-64 sm:h-72 w-full min-w-0 pt-2">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                   <BarChart
                     data={unitsData}
                     margin={{ top: 10, right: 10, left: -20, bottom: 45 }}

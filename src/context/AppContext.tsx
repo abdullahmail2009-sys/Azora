@@ -30,12 +30,20 @@ import {
 } from '../data/defaultSubjectTools.ts';
 import { DEFAULT_PYQS } from '../data/defaultPYQs.ts';
 import { calculateOverallProgress } from '../utils/progressCalc.ts';
-import { calculateStudyStreak, StudyStreakSummary } from '../utils/streakCalc.ts';
+import {
+  calculateStudyStreak,
+  StudyStreakSummary,
+  getLocalDateStr,
+  sanitizeLegacySeedData,
+} from '../utils/streakCalc.ts';
 import { mergeParsedSyllabusIntoActive, ParsedSubjectPreview } from '../utils/pdfSyllabusParser.ts';
 import {
   auth,
   db,
   signInWithGoogle as fbSignIn,
+  loginWithEmailPassword,
+  registerWithEmailPassword,
+  sendPasswordReset,
   checkGoogleRedirectResult,
   signOutUser as fbSignOut,
   OperationType,
@@ -62,6 +70,11 @@ interface AppContextType {
   currentUser: FirebaseUser | null;
   syncState: 'synced' | 'syncing' | 'offline_local' | 'error';
   lastSyncTime: string | null;
+  authError: string | null;
+  clearAuthError: () => void;
+  authLoading: boolean;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   progressSummary: ProgressSummary;
   studyStreak: StudyStreakSummary;
   // Actions
@@ -119,6 +132,9 @@ interface AppContextType {
   deleteTopic: (subjectId: string, unitId: string, chapterId: string, topicId: string) => void;
   resetAllData: () => void;
   loginGoogle: () => Promise<void>;
+  loginWithEmail: (email: string, password: string) => Promise<boolean>;
+  registerWithEmail: (displayName: string, email: string, password: string) => Promise<boolean>;
+  resetPassword: (email: string) => Promise<boolean>;
   logoutUser: () => Promise<void>;
   exportJSON: () => void;
   importJSON: (jsonString: string) => boolean;
@@ -273,107 +289,20 @@ const DEFAULT_MILESTONES: MilestoneItem[] = [
   },
 ];
 
-// Seed starter progress for realistic testability
+// A fresh installation starts with an empty mastery map so no fabricated study history or 7-day streak is claimed.
 function getInitialMasteryMap(): Record<string, TopicMasteryState> {
-  const map: Record<string, TopicMasteryState> = {};
-  const relDate = (offsetDays: number): string => {
-    const dt = new Date();
-    dt.setDate(dt.getDate() + offsetDays);
-    return dt.toISOString().split('T')[0];
-  };
-
-  // Starter completed topics for Electrostatics
-  map['phy-c1-t1'] = {
-    topicId: 'phy-c1-t1',
-    chapterId: 'phy-c1',
-    subjectId: 'physics',
-    status: 'Completed',
-    confidence: 4,
-    completedStages: ['theory', 'notes', 'formula_sheet', 'ncert_exercises', 'pyqs', 'revision_1'],
-    difficulty: 'Easy',
-    totalStudyMinutes: 90,
-    questionsSolved: 15,
-    questionsCorrect: 13,
-    startDate: relDate(-6),
-    completedDate: relDate(-5),
-    lastStudiedDate: relDate(-3),
-    updatedAt: new Date().toISOString(),
-  };
-
-  map['phy-c1-t2'] = {
-    topicId: 'phy-c1-t2',
-    chapterId: 'phy-c1',
-    subjectId: 'physics',
-    status: 'Completed',
-    confidence: 5,
-    completedStages: ['theory', 'notes', 'formula_sheet', 'ncert_exercises', 'pyqs', 'revision_1', 'revision_2'],
-    difficulty: 'Moderate',
-    totalStudyMinutes: 150,
-    questionsSolved: 20,
-    questionsCorrect: 19,
-    startDate: relDate(-5),
-    completedDate: relDate(-3),
-    lastStudiedDate: relDate(-2),
-    updatedAt: new Date().toISOString(),
-  };
-
-  map['phy-c1-t3'] = {
-    topicId: 'phy-c1-t3',
-    chapterId: 'phy-c1',
-    subjectId: 'physics',
-    status: 'In Progress',
-    confidence: 3,
-    completedStages: ['theory', 'notes'],
-    difficulty: 'Moderate',
-    totalStudyMinutes: 80,
-    questionsSolved: 8,
-    questionsCorrect: 6,
-    startDate: relDate(-2),
-    lastStudiedDate: relDate(-1),
-    updatedAt: new Date().toISOString(),
-  };
-
-  map['che-c1-t1'] = {
-    topicId: 'che-c1-t1',
-    chapterId: 'che-c1',
-    subjectId: 'chemistry',
-    status: 'Completed',
-    confidence: 4,
-    completedStages: ['theory', 'notes', 'formula_sheet', 'ncert_exercises', 'pyqs'],
-    difficulty: 'Moderate',
-    totalStudyMinutes: 110,
-    questionsSolved: 14,
-    questionsCorrect: 12,
-    startDate: relDate(-5),
-    completedDate: relDate(-4),
-    lastStudiedDate: relDate(-2),
-    updatedAt: new Date().toISOString(),
-  };
-
-  map['math-c1-t1'] = {
-    topicId: 'math-c1-t1',
-    chapterId: 'math-c1',
-    subjectId: 'mathematics',
-    status: 'Completed',
-    confidence: 5,
-    completedStages: ['theory', 'notes', 'ncert_exercises', 'pyqs', 'revision_1'],
-    difficulty: 'Moderate',
-    totalStudyMinutes: 120,
-    questionsSolved: 25,
-    questionsCorrect: 23,
-    startDate: relDate(-6),
-    completedDate: relDate(-4),
-    lastStudiedDate: relDate(-1),
-    updatedAt: new Date().toISOString(),
-  };
-
-  return map;
+  return {};
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [syncState, setSyncState] = useState<'synced' | 'syncing' | 'offline_local' | 'error'>('offline_local');
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+
+  const clearAuthError = useCallback(() => setAuthError(null), []);
 
   // Core state collections
   const [activeSyllabus, setActiveSyllabus] = useState<SyllabusVersion>(OFFICIAL_RBSE_2026_27_SYLLABUS);
@@ -387,7 +316,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       topicTitle: "Coulomb's Law & Superposition Principle",
       subjectName: 'Physics',
       revisionStep: 3,
-      scheduledDate: new Date().toISOString().split('T')[0], // Due today!
+      scheduledDate: getLocalDateStr(), // Due today (uncompleted)
       completed: false,
     },
     {
@@ -398,7 +327,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       topicTitle: "Henry's Law & Raoult's Law",
       subjectName: 'Chemistry',
       revisionStep: 1,
-      scheduledDate: new Date().toISOString().split('T')[0], // Due today!
+      scheduledDate: getLocalDateStr(), // Due today (uncompleted)
       completed: false,
     },
   ]);
@@ -406,7 +335,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [studyTasks, setStudyTasks] = useState<DailyStudyTask[]>([
     {
       id: 'task-seed-1',
-      date: new Date().toISOString().split('T')[0],
+      date: getLocalDateStr(),
       subjectId: 'physics',
       subjectName: 'Physics',
       chapterId: 'phy-c1',
@@ -415,7 +344,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       topicTitle: 'Electric Field Lines & Electric Dipole',
       taskType: 'numericals',
       plannedMinutes: 60,
-      actualMinutes: 45,
+      actualMinutes: 0,
       priority: 'high',
       energySlot: 'morning_high',
       completed: false,
@@ -423,7 +352,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     },
     {
       id: 'task-seed-2',
-      date: new Date().toISOString().split('T')[0],
+      date: getLocalDateStr(),
       subjectId: 'mathematics',
       subjectName: 'Mathematics',
       chapterId: 'math-c1',
@@ -446,39 +375,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ...DEFAULT_MATH_RESOURCES,
   ]);
 
-  const [mockTests, setMockTests] = useState<MockTestRecord[]>([
-    {
-      id: 'test-seed-1',
-      testName: 'Physics Unit 1 Chapter Test (Electrostatics)',
-      date: '2026-10-15',
-      subjectId: 'physics',
-      subjectName: 'Physics',
-      maxMarks: 25,
-      marksObtained: 21,
-      timeTakenMinutes: 60,
-      chapterPerformance: [
-        {
-          chapterId: 'phy-c1',
-          chapterTitle: 'Electric Charges and Fields',
-          marksScored: 21,
-          maxMarks: 25,
-          errorsCount: 1,
-          flaggedWeakness: false,
-        },
-      ],
-      mistakes: [
-        {
-          id: 'mistake-seed-1',
-          chapterId: 'phy-c1',
-          topicId: 'phy-c1-t3',
-          questionReference: 'Q4 (Dipole in uniform field)',
-          description: 'Forgot factor of sin(theta) when calculating potential energy U = -p.E',
-          confidenceImpact: -1,
-        },
-      ],
-      notes: 'Strong in Gauss Law derivations; need careful vector algebra on dipole torque and potential energy.',
-    },
-  ]);
+  const [mockTests, setMockTests] = useState<MockTestRecord[]>([]);
 
   const [pyqs, setPyqs] = useState<PYQRecord[]>(DEFAULT_PYQS);
   const [milestones, setMilestones] = useState<MilestoneItem[]>(DEFAULT_MILESTONES);
@@ -540,30 +437,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
         const data = JSON.parse(stored);
-        if (data.activeSyllabus) {
+        if (data.activeSyllabus && Array.isArray(data.activeSyllabus.subjects)) {
           setActiveSyllabus({
             ...data.activeSyllabus,
             academicSession: '2026–27',
-            title: data.activeSyllabus.title?.replace(/2027[–-]28/g, '2026–27') || 'RBSE Class 12 Core Academic Syllabus (Session 2026–27)',
+            title:
+              data.activeSyllabus.title?.replace(/2027[–-]28/g, '2026–27') ||
+              'RBSE Class 12 Core Academic Syllabus (Session 2026–27)',
           });
         }
-        if (data.masteryMap) setMasteryMap(data.masteryMap);
-        if (data.revisionTasks) setRevisionTasks(data.revisionTasks);
-        if (data.studyTasks) setStudyTasks(data.studyTasks);
-        if (data.resources) setResources(data.resources);
-        if (data.mockTests) setMockTests(data.mockTests);
-        if (data.pyqs) setPyqs(data.pyqs);
-        if (data.milestones) {
-          const hasStaleMilestone =
-            Array.isArray(data.milestones) &&
-            data.milestones.some((m: any) => (m.id === 'mile-1' && m.date === '2027-09-20') || m.academicYear === '2027–28' || m.date?.startsWith('2028'));
+        const sanitized = sanitizeLegacySeedData({
+          masteryMap: data.masteryMap && typeof data.masteryMap === 'object' ? data.masteryMap : {},
+          studyTasks: Array.isArray(data.studyTasks) ? data.studyTasks : [],
+          mockTests: Array.isArray(data.mockTests) ? data.mockTests : [],
+        });
+        if (data.masteryMap && typeof data.masteryMap === 'object') setMasteryMap(sanitized.masteryMap);
+        if (Array.isArray(data.revisionTasks)) setRevisionTasks(data.revisionTasks);
+        if (Array.isArray(data.studyTasks)) setStudyTasks(sanitized.studyTasks);
+        if (Array.isArray(data.resources)) setResources(data.resources);
+        if (Array.isArray(data.mockTests)) setMockTests(sanitized.mockTests);
+        if (Array.isArray(data.pyqs)) setPyqs(data.pyqs);
+        if (Array.isArray(data.milestones)) {
+          const hasStaleMilestone = data.milestones.some(
+            (m: any) =>
+              (m.id === 'mile-1' && m.date === '2027-09-20') ||
+              m.academicYear === '2027–28' ||
+              m.date?.startsWith('2028')
+          );
           if (hasStaleMilestone || data.milestones.length === 0) {
             setMilestones(DEFAULT_MILESTONES);
           } else {
             setMilestones(data.milestones);
           }
         }
-        if (data.preferences) {
+        if (data.preferences && typeof data.preferences === 'object') {
           const rawGem = data.preferences.geminiModel;
           const validGem =
             !rawGem || rawGem === 'gemini-2.5-flash' || rawGem === 'gemini-1.5-flash'
@@ -581,10 +488,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               data.preferences.aiProvider ? Boolean(data.preferences.aiStrictLocalOnly) : false,
           }));
         }
-        if (data.uploadedFilesMetadata) setUploadedFilesMetadata(data.uploadedFilesMetadata);
-        if (data.aiPersistentRules) setAiPersistentRules(data.aiPersistentRules);
-        if (data.aiChatHistory) setAiChatHistory(data.aiChatHistory);
-        if (data.lastSyncTime) setLastSyncTime(data.lastSyncTime);
+        if (Array.isArray(data.uploadedFilesMetadata)) setUploadedFilesMetadata(data.uploadedFilesMetadata);
+        if (Array.isArray(data.aiPersistentRules)) setAiPersistentRules(data.aiPersistentRules);
+        if (Array.isArray(data.aiChatHistory)) setAiChatHistory(data.aiChatHistory);
+        if (data.lastSyncTime && typeof data.lastSyncTime === 'string') setLastSyncTime(data.lastSyncTime);
       }
     } catch (e) {
       console.warn('Could not read from local storage:', e);
@@ -633,11 +540,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     // Complete any pending Android WebView OAuth redirect once on mount;
     // onAuthStateChanged below will handle the resulting authenticated user state.
-    checkGoogleRedirectResult().catch(() => {});
+    checkGoogleRedirectResult()
+      .then((res) => {
+        if (res?.error) {
+          setAuthError(res.error);
+          setSyncState('offline_local');
+        }
+      })
+      .catch(() => {});
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
+        setAuthError(null);
         setSyncState('syncing');
         try {
           const userDocRef = doc(db, 'users', user.uid);
@@ -653,8 +568,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
           if (snap && snap.exists()) {
             const cloudData = snap.data();
-            if (cloudData.masteryMap) setMasteryMap((prev) => ({ ...prev, ...cloudData.masteryMap }));
-            if (cloudData.preferences) {
+            const sanitizedCloud = sanitizeLegacySeedData({
+              masteryMap: cloudData.masteryMap && typeof cloudData.masteryMap === 'object' ? cloudData.masteryMap : {},
+              studyTasks: Array.isArray(cloudData.studyTasks) ? cloudData.studyTasks : [],
+              mockTests: Array.isArray(cloudData.mockTests) ? cloudData.mockTests : [],
+            });
+            if (cloudData.masteryMap && typeof cloudData.masteryMap === 'object') {
+              setMasteryMap((prev) => {
+                const merged: Record<string, TopicMasteryState> = { ...sanitizedCloud.masteryMap };
+                for (const [tId, localEntry] of Object.entries(prev)) {
+                  const cloudEntry = merged[tId];
+                  if (!cloudEntry) {
+                    merged[tId] = localEntry;
+                  } else if (
+                    localEntry.updatedAt &&
+                    (!cloudEntry.updatedAt || localEntry.updatedAt > cloudEntry.updatedAt)
+                  ) {
+                    merged[tId] = localEntry;
+                  }
+                }
+                return merged;
+              });
+            }
+            if (cloudData.preferences && typeof cloudData.preferences === 'object') {
               const rawGem = cloudData.preferences.geminiModel;
               const validGem =
                 !rawGem || rawGem === 'gemini-2.5-flash' || rawGem === 'gemini-1.5-flash'
@@ -667,18 +603,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 theme: 'light',
               }));
             }
-            if (cloudData.activeSyllabus) setActiveSyllabus(cloudData.activeSyllabus);
-            if (cloudData.studyTasks) setStudyTasks(cloudData.studyTasks);
-            if (cloudData.revisionTasks) setRevisionTasks(cloudData.revisionTasks);
-            if (cloudData.resources) setResources(cloudData.resources);
-            if (cloudData.mockTests) setMockTests(cloudData.mockTests);
-            if (cloudData.pyqs) setPyqs(cloudData.pyqs);
-            if (cloudData.milestones) setMilestones(cloudData.milestones);
-            if (cloudData.uploadedFilesMetadata) setUploadedFilesMetadata(cloudData.uploadedFilesMetadata);
-            if (cloudData.aiPersistentRules) setAiPersistentRules(cloudData.aiPersistentRules);
-            if (cloudData.aiChatHistory) setAiChatHistory(cloudData.aiChatHistory);
+            if (cloudData.activeSyllabus && Array.isArray(cloudData.activeSyllabus.subjects)) {
+              setActiveSyllabus(cloudData.activeSyllabus);
+            }
+            if (Array.isArray(cloudData.studyTasks)) {
+              setStudyTasks((prev) => {
+                const mapById = new Map<string, DailyStudyTask>();
+                sanitizedCloud.studyTasks.forEach((t) => mapById.set(t.id, t));
+                prev.forEach((t) => {
+                  const existing = mapById.get(t.id);
+                  if (!existing || (t.completed && !existing.completed)) {
+                    mapById.set(t.id, t);
+                  }
+                });
+                return Array.from(mapById.values());
+              });
+            }
+            if (Array.isArray(cloudData.revisionTasks)) {
+              setRevisionTasks((prev) => {
+                const mapById = new Map<string, SpacedRevisionTask>();
+                (cloudData.revisionTasks as SpacedRevisionTask[]).forEach((r) => mapById.set(r.id, r));
+                prev.forEach((r) => {
+                  const existing = mapById.get(r.id);
+                  if (!existing || (r.completed && !existing.completed)) {
+                    mapById.set(r.id, r);
+                  }
+                });
+                return Array.from(mapById.values());
+              });
+            }
+            if (Array.isArray(cloudData.resources)) setResources(cloudData.resources);
+            if (Array.isArray(cloudData.mockTests)) {
+              setMockTests((prev) => {
+                const mapById = new Map<string, MockTestRecord>();
+                sanitizedCloud.mockTests.forEach((m) => mapById.set(m.id, m));
+                prev.forEach((m) => {
+                  if (!mapById.has(m.id)) {
+                    mapById.set(m.id, m);
+                  }
+                });
+                return Array.from(mapById.values());
+              });
+            }
+            if (Array.isArray(cloudData.pyqs)) setPyqs(cloudData.pyqs);
+            if (Array.isArray(cloudData.milestones)) setMilestones(cloudData.milestones);
+            if (Array.isArray(cloudData.uploadedFilesMetadata)) setUploadedFilesMetadata(cloudData.uploadedFilesMetadata);
+            if (Array.isArray(cloudData.aiPersistentRules)) setAiPersistentRules(cloudData.aiPersistentRules);
+            if (Array.isArray(cloudData.aiChatHistory)) setAiChatHistory(cloudData.aiChatHistory);
           } else {
             // First time sync to Firestore: persist full local state so no categories are lost
+            const sanitizedLocal = sanitizeLegacySeedData({
+              masteryMap,
+              studyTasks,
+              mockTests,
+            });
             try {
               await setDoc(
                 userDocRef,
@@ -691,13 +669,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   dailyTargetHours: preferences.dailyStudyHoursLimit || 6,
                   revisionScheduleType: preferences.revisionScheduleType || 'default',
                   highEnergyTime: preferences.preferredHighEnergySlot || 'morning',
-                  masteryMap,
+                  masteryMap: sanitizedLocal.masteryMap,
                   preferences,
                   activeSyllabus,
-                  studyTasks,
+                  studyTasks: sanitizedLocal.studyTasks,
                   revisionTasks,
                   resources,
-                  mockTests,
+                  mockTests: sanitizedLocal.mockTests,
                   pyqs,
                   milestones,
                   uploadedFilesMetadata,
@@ -717,6 +695,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const nowStr = new Date().toLocaleTimeString();
           setLastSyncTime(nowStr);
           setSyncState('synced');
+          setIsAuthModalOpen(false);
         } catch (err) {
           console.error('Firestore sync error:', err);
           setSyncState('offline_local');
@@ -818,14 +797,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
         const isConfidenceRated =
           partial.confidence !== undefined ? true : existing.isConfidenceRated;
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getLocalDateStr();
         let nextRevDate = partial.nextRevisionDate ?? existing.nextRevisionDate;
 
         if (partial.status === 'Completed' && !nextRevDate) {
           const baseDays = preferences.revisionIntervals?.[0] || 3;
           const d = new Date();
           d.setDate(d.getDate() + baseDays);
-          nextRevDate = d.toISOString().split('T')[0];
+          nextRevDate = getLocalDateStr(d);
         }
 
         const updated: TopicMasteryState = {
@@ -934,7 +913,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ...existing,
             completedStages: newStages,
             status: newStatus,
-            lastStudiedDate: new Date().toISOString().split('T')[0],
+            lastStudiedDate: getLocalDateStr(),
             updatedAt: new Date().toISOString(),
           },
         };
@@ -960,7 +939,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             return {
               ...t,
               completed: true,
-              completedDate: new Date().toISOString().split('T')[0],
+              completedDate: getLocalDateStr(),
               confidenceScore: confidence,
               recallAccuracy: recall,
             };
@@ -1717,21 +1696,98 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loginGoogle = useCallback(async () => {
     try {
+      setAuthError(null);
+      setAuthLoading(true);
       setSyncState('syncing');
       const user = await fbSignIn();
       if (user) {
         setSyncState('synced');
         setLastSyncTime(new Date().toLocaleTimeString());
+        setIsAuthModalOpen(false);
+      } else {
+        setSyncState('offline_local');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Login error:', e);
+      const errMsg =
+        e instanceof Error
+          ? e.message
+          : 'Google Sign-In failed. Local storage remains active.';
+      setAuthError(errMsg);
       setSyncState('error');
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  const loginWithEmail = useCallback(async (email: string, password: string): Promise<boolean> => {
+    try {
+      setAuthError(null);
+      setAuthLoading(true);
+      setSyncState('syncing');
+      const user = await loginWithEmailPassword(email, password);
+      if (user) {
+        setSyncState('synced');
+        setLastSyncTime(new Date().toLocaleTimeString());
+        return true;
+      }
+      setSyncState('offline_local');
+      return false;
+    } catch (e: any) {
+      const errMsg = e instanceof Error ? e.message : 'Sign-in failed.';
+      setAuthError(errMsg);
+      setSyncState('error');
+      return false;
+    } finally {
+      setAuthLoading(false);
+    }
+  }, []);
+
+  const registerWithEmail = useCallback(
+    async (displayName: string, email: string, password: string): Promise<boolean> => {
+      try {
+        setAuthError(null);
+        setAuthLoading(true);
+        setSyncState('syncing');
+        const user = await registerWithEmailPassword(displayName, email, password);
+        if (user) {
+          setSyncState('synced');
+          setLastSyncTime(new Date().toLocaleTimeString());
+          return true;
+        }
+        setSyncState('offline_local');
+        return false;
+      } catch (e: any) {
+        const errMsg = e instanceof Error ? e.message : 'Registration failed.';
+        setAuthError(errMsg);
+        setSyncState('error');
+        return false;
+      } finally {
+        setAuthLoading(false);
+      }
+    },
+    []
+  );
+
+  const resetPassword = useCallback(async (email: string): Promise<boolean> => {
+    try {
+      setAuthError(null);
+      setAuthLoading(true);
+      await sendPasswordReset(email);
+      return true;
+    } catch (e: any) {
+      const errMsg = e instanceof Error ? e.message : 'Could not send password reset email.';
+      setAuthError(errMsg);
+      return false;
+    } finally {
+      setAuthLoading(false);
     }
   }, []);
 
   const logoutUser = useCallback(async () => {
     await fbSignOut();
     setCurrentUser(null);
+    setAuthError(null);
     setSyncState('offline_local');
   }, []);
 
@@ -1757,7 +1813,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `AZORA_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `AZORA_Backup_${getLocalDateStr()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }, [
@@ -1823,6 +1879,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     currentUser,
     syncState,
     lastSyncTime,
+    authError,
+    clearAuthError,
+    authLoading,
+    isAuthModalOpen,
+    setIsAuthModalOpen,
     progressSummary,
     studyStreak,
     updateTopicMastery,
@@ -1874,6 +1935,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deleteTopic,
     resetAllData,
     loginGoogle,
+    loginWithEmail,
+    registerWithEmail,
+    resetPassword,
     logoutUser,
     exportJSON,
     importJSON,

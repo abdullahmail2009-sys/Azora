@@ -23,7 +23,7 @@ import {
   CalendarCheck2,
 } from 'lucide-react';
 import { VisualProgressDashboard } from '../components/VisualProgressDashboard.tsx';
-import { STREAK_MILESTONES, type StreakFireVariant } from '../utils/streakCalc.ts';
+import { STREAK_MILESTONES, getLocalDateStr, type StreakFireVariant } from '../utils/streakCalc.ts';
 
 interface StreakFireIconProps {
   variant: StreakFireVariant;
@@ -125,7 +125,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [editMilestoneTitle, setEditMilestoneTitle] = useState('');
   const [editMilestoneDate, setEditMilestoneDate] = useState('');
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateStr();
   const [selectedStreakDate, setSelectedStreakDate] = useState<string>(todayStr);
   const allowAutoComplete = Boolean(preferences.autoCompleteFromStages);
 

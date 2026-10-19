@@ -89,9 +89,16 @@ export const ThreeDLabView: React.FC = () => {
     const width = mountElem.clientWidth || window.innerWidth;
     const height = mountElem.clientHeight || 520;
 
-    // Renderer with modern color pipeline
+    // Renderer with modern color pipeline & safe WebGL fallback
     const isHeadless = navigator.webdriver || /HeadlessChrome/i.test(navigator.userAgent);
-    const renderer = new THREE.WebGLRenderer({ antialias: !isHeadless, powerPreference: 'high-performance' });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: !isHeadless, powerPreference: 'high-performance' });
+    } catch (e) {
+      console.warn('WebGL is not available in this environment:', e);
+      setWebglContextLost(true);
+      return;
+    }
     renderer.setSize(width, height);
     renderer.setPixelRatio(isHeadless ? 1 : Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;

@@ -64,6 +64,105 @@ export interface StreakDataInput {
 
 export const STREAK_MILESTONES = [1, 3, 7, 14, 21, 30, 60, 100] as const;
 
+/**
+ * Returns local calendar date formatted as YYYY-MM-DD (respects user's local timezone and midnight boundaries).
+ */
+export function getLocalDateStr(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Detects and removes legacy factory-seeded demo records that previously caused a newly installed app
+ * to display a fabricated 7-day study streak, while preserving all genuine user study records.
+ */
+const LEGACY_SEED_MASTERY_SIGNATURES: Record<
+  string,
+  { totalStudyMinutes: number; questionsSolved: number; questionsCorrect: number; confidence: number }
+> = {
+  'phy-c1-t1': { totalStudyMinutes: 90, questionsSolved: 15, questionsCorrect: 13, confidence: 4 },
+  'phy-c1-t2': { totalStudyMinutes: 150, questionsSolved: 20, questionsCorrect: 19, confidence: 5 },
+  'phy-c1-t3': { totalStudyMinutes: 80, questionsSolved: 8, questionsCorrect: 6, confidence: 3 },
+  'che-c1-t1': { totalStudyMinutes: 110, questionsSolved: 14, questionsCorrect: 12, confidence: 4 },
+  'math-c1-t1': { totalStudyMinutes: 120, questionsSolved: 25, questionsCorrect: 23, confidence: 5 },
+};
+
+export function isLegacySeedMasteryRecord(record: TopicMasteryState | undefined): boolean {
+  if (!record || !record.topicId) return false;
+  const sig = LEGACY_SEED_MASTERY_SIGNATURES[record.topicId];
+  if (!sig) return false;
+  if (record.notes && record.notes.trim().length > 0) return false;
+  if (record.isConfidenceRated === true) return false;
+  return (
+    record.totalStudyMinutes === sig.totalStudyMinutes &&
+    record.questionsSolved === sig.questionsSolved &&
+    record.questionsCorrect === sig.questionsCorrect &&
+    record.confidence === sig.confidence
+  );
+}
+
+export function sanitizeLegacySeedData(input: {
+  masteryMap?: Record<string, TopicMasteryState>;
+  studyTasks?: DailyStudyTask[];
+  mockTests?: MockTestRecord[];
+}): {
+  masteryMap: Record<string, TopicMasteryState>;
+  studyTasks: DailyStudyTask[];
+  mockTests: MockTestRecord[];
+  didSanitize: boolean;
+} {
+  let didSanitize = false;
+  const cleanedMastery: Record<string, TopicMasteryState> = {};
+
+  for (const [key, val] of Object.entries(input.masteryMap || {})) {
+    if (isLegacySeedMasteryRecord(val)) {
+      didSanitize = true;
+      continue;
+    }
+    cleanedMastery[key] = val;
+  }
+
+  const cleanedTasks: DailyStudyTask[] = (input.studyTasks || []).map((task) => {
+    if (
+      task &&
+      task.id === 'task-seed-1' &&
+      !task.completed &&
+      task.actualMinutes === 45 &&
+      !task.completedAt
+    ) {
+      didSanitize = true;
+      return {
+        ...task,
+        actualMinutes: 0,
+      };
+    }
+    return task;
+  });
+
+  const cleanedTests: MockTestRecord[] = (input.mockTests || []).filter((test) => {
+    if (
+      test &&
+      test.id === 'test-seed-1' &&
+      test.testName === 'Physics Unit 1 Chapter Test (Electrostatics)' &&
+      test.marksObtained === 21 &&
+      test.maxMarks === 25
+    ) {
+      didSanitize = true;
+      return false;
+    }
+    return true;
+  });
+
+  return {
+    masteryMap: cleanedMastery,
+    studyTasks: cleanedTasks,
+    mockTests: cleanedTests,
+    didSanitize,
+  };
+}
+
 export function getStreakMilestoneInfo(
   currentStreak: number,
   isActiveToday: boolean,
@@ -109,8 +208,7 @@ export function getStreakMilestoneInfo(
   // A daily milestone is active when the user hits an exact streak milestone day or completes 2+ activities today
   const isMilestoneDay =
     (isExactStandardMilestone && isActiveToday) ||
-    (isActiveToday && todayActivitiesCount >= 2) ||
-    isExactStandardMilestone;
+    (isActiveToday && todayActivitiesCount >= 2);
 
   let fireVariant: StreakFireVariant = 'ember';
   if (safeStreak === 0) {
@@ -169,6 +267,8 @@ export function normalizeDateStr(raw?: string | null): string | null {
   const trimmed = raw.trim();
   const datePart = trimmed.slice(0, 10);
   if (!DATE_REGEX.test(datePart)) return null;
+  const [y, m, d] = datePart.split('-').map(Number);
+  if (!y || m < 1 || m > 12 || d < 1 || d > 31) return null;
   return datePart;
 }
 
@@ -209,9 +309,9 @@ function formatDayMetadata(dateStr: string): {
  */
 export function calculateStudyStreak(
   input: StreakDataInput,
-  todayStr: string = new Date().toISOString().slice(0, 10)
+  todayStr: string = getLocalDateStr()
 ): StudyStreakSummary {
-  const validToday = normalizeDateStr(todayStr) || new Date().toISOString().slice(0, 10);
+  const validToday = normalizeDateStr(todayStr) || getLocalDateStr();
 
   // Build topic lookup map from syllabus if provided
   const topicMetaMap = new Map<
@@ -250,9 +350,21 @@ export function calculateStudyStreak(
     }
   };
 
-  // 1. Inspect Topic Mastery entries
+  // 1. Inspect Topic Mastery entries (only count genuine qualifying study activity)
   Object.values(input.masteryMap || {}).forEach((m) => {
     if (!m || !m.topicId) return;
+    if (isLegacySeedMasteryRecord(m)) return;
+
+    const hasQualifyingActivity =
+      m.status === 'Completed' ||
+      m.status === 'In Progress' ||
+      m.status === 'Needs Revision' ||
+      (Array.isArray(m.completedStages) && m.completedStages.length > 0) ||
+      (m.totalStudyMinutes || 0) > 0 ||
+      (m.questionsSolved || 0) > 0 ||
+      Boolean(m.completedDate);
+    if (!hasQualifyingActivity) return;
+
     const meta = topicMetaMap.get(m.topicId);
     const topicTitle = meta?.title || m.topicId;
     const subLabel = meta ? `${meta.subjectName} · ${meta.chapterTitle}` : m.subjectId || 'Syllabus Topic';
@@ -310,6 +422,9 @@ export function calculateStudyStreak(
   // 2. Inspect Daily Study Tasks (completed tasks or tasks with logged actualMinutes > 0)
   (input.studyTasks || []).forEach((task) => {
     if (!task) return;
+    if (task.id === 'task-seed-1' && !task.completed && task.actualMinutes === 45 && !task.completedAt) {
+      return;
+    }
     const hasActivity = Boolean(task.completed) || (task.actualMinutes || 0) > 0;
     if (!hasActivity) return;
 
@@ -360,6 +475,14 @@ export function calculateStudyStreak(
   // 4. Inspect Mock Tests
   (input.mockTests || []).forEach((test) => {
     if (!test) return;
+    if (
+      test.id === 'test-seed-1' &&
+      test.testName === 'Physics Unit 1 Chapter Test (Electrostatics)' &&
+      test.marksObtained === 21 &&
+      test.maxMarks === 25
+    ) {
+      return;
+    }
     const testDate = normalizeDateStr(test.date);
     if (!testDate) return;
 

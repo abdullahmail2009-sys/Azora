@@ -10,6 +10,8 @@ import { TopicModal } from './components/TopicModal.tsx';
 import { SyllabusDiffModal } from './components/SyllabusDiffModal.tsx';
 import { AITutorModal } from './components/AITutorModal.tsx';
 import { LocalMusicPlayer } from './components/LocalMusicPlayer.tsx';
+import { AuthModal } from './components/AuthModal.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 
 // Views
 import { DashboardView } from './views/DashboardView.tsx';
@@ -179,73 +181,75 @@ const MainAppContent: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 pt-5 pb-24 lg:pb-12">
-        {(activeTab === 'dashboard' || activeTab === 'home') && (
-          <DashboardView
-            onSelectTopic={(id: string) => setSelectedTopicId(id)}
-            setActiveTab={(tab: string) => setActiveTab(tab)}
-            onOpenAITutor={handleOpenGeneralAITutor}
-          />
-        )}
+        <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
+          {(activeTab === 'dashboard' || activeTab === 'home') && (
+            <DashboardView
+              onSelectTopic={(id: string) => setSelectedTopicId(id)}
+              setActiveTab={(tab: string) => setActiveTab(tab)}
+              onOpenAITutor={handleOpenGeneralAITutor}
+            />
+          )}
 
-        {activeTab === 'syllabus' && (
-          <SyllabusView
-            onSelectTopic={(id: string) => setSelectedTopicId(id)}
-            onOpenSyllabusDiff={() => setIsSyllabusDiffOpen(true)}
-            onOpenAITutor={handleOpenGeneralAITutor}
-            onNavigateToImportPDF={() => setActiveTab('import-syllabus')}
-          />
-        )}
+          {activeTab === 'syllabus' && (
+            <SyllabusView
+              onSelectTopic={(id: string) => setSelectedTopicId(id)}
+              onOpenSyllabusDiff={() => setIsSyllabusDiffOpen(true)}
+              onOpenAITutor={handleOpenGeneralAITutor}
+              onNavigateToImportPDF={() => setActiveTab('import-syllabus')}
+            />
+          )}
 
-        {(activeTab === 'import-syllabus' || activeTab === 'syllabus_import') && (
-          <SyllabusImportView
-            onBackToSyllabus={() => setActiveTab('syllabus')}
-            onNavigateToPlanner={() => setActiveTab('planner')}
-          />
-        )}
+          {(activeTab === 'import-syllabus' || activeTab === 'syllabus_import') && (
+            <SyllabusImportView
+              onBackToSyllabus={() => setActiveTab('syllabus')}
+              onNavigateToPlanner={() => setActiveTab('planner')}
+            />
+          )}
 
-        {(activeTab === 'pyqs' || activeTab === 'pyq') && (
-          <PYQView onSelectTopic={(id: string) => setSelectedTopicId(id)} />
-        )}
+          {(activeTab === 'pyqs' || activeTab === 'pyq') && (
+            <PYQView onSelectTopic={(id: string) => setSelectedTopicId(id)} />
+          )}
 
-        {activeTab === 'backlog' && (
-          <BacklogView
-            onSelectTopic={(id: string) => setSelectedTopicId(id)}
-            onNavigateToAI={() => setActiveTab('ai-assistant')}
-          />
-        )}
+          {activeTab === 'backlog' && (
+            <BacklogView
+              onSelectTopic={(id: string) => setSelectedTopicId(id)}
+              onNavigateToAI={() => setActiveTab('ai-assistant')}
+            />
+          )}
 
-        {plannerTabs.includes(activeTab) && (
-          <StudyPlannerView
-            initialSection={
-              activeTab === 'revisions'
-                ? 'revisions'
-                : activeTab === 'tests-exams'
-                ? 'tests-exams'
-                : activeTab === 'pcm-tools'
-                ? 'pcm-tools'
-                : activeTab === 'reports'
-                ? 'reports'
-                : 'schedule'
-            }
-            onOpenAITutorForMistake={(mistakeText: string) => {
-              setAiTutorContext({ topicTitle: mistakeText, subjectName: 'Physics' });
-              setIsAITutorOpen(true);
-            }}
-          />
-        )}
+          {plannerTabs.includes(activeTab) && (
+            <StudyPlannerView
+              initialSection={
+                activeTab === 'revisions'
+                  ? 'revisions'
+                  : activeTab === 'tests-exams'
+                  ? 'tests-exams'
+                  : activeTab === 'pcm-tools'
+                  ? 'pcm-tools'
+                  : activeTab === 'reports'
+                  ? 'reports'
+                  : 'schedule'
+              }
+              onOpenAITutorForMistake={(mistakeText: string) => {
+                setAiTutorContext({ topicTitle: mistakeText, subjectName: 'Physics' });
+                setIsAITutorOpen(true);
+              }}
+            />
+          )}
 
-        {(activeTab === '3d-lab' || activeTab === '3d_lab') && (
-          <ThreeDLabView />
-        )}
+          {(activeTab === '3d-lab' || activeTab === '3d_lab') && (
+            <ThreeDLabView />
+          )}
 
-        {(activeTab === 'ai-assistant' || activeTab === 'ai_assistant') && (
-          <AIAssistantView
-            setActiveTab={(tab: string) => setActiveTab(tab)}
-            onSelectTopic={(id: string) => setSelectedTopicId(id)}
-          />
-        )}
+          {(activeTab === 'ai-assistant' || activeTab === 'ai_assistant') && (
+            <AIAssistantView
+              setActiveTab={(tab: string) => setActiveTab(tab)}
+              onSelectTopic={(id: string) => setSelectedTopicId(id)}
+            />
+          )}
 
-        {activeTab === 'settings' && <SettingsView />}
+          {activeTab === 'settings' && <SettingsView />}
+        </ErrorBoundary>
       </main>
 
       {/* Mobile Bottom Navigation */}
@@ -284,6 +288,9 @@ const MainAppContent: React.FC = () => {
 
       {/* Custom Local Background Music Player */}
       <LocalMusicPlayer />
+
+      {/* Unified Account Sign-In / Registration Modal */}
+      <AuthModal />
     </div>
   );
 };
